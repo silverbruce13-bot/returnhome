@@ -9,14 +9,28 @@ import MissionMap from './components/MissionMap';
 import { useLanguage } from './i18n';
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+console.log("Initializing App.tsx module");
+
+let ai: GoogleGenAI | null = null;
+try {
+  const apiKey = process.env.API_KEY;
+  console.log("API Key present:", !!apiKey);
+  if (apiKey) {
+    ai = new GoogleGenAI({ apiKey });
+  } else {
+    console.warn("API Key is missing. AI features will be disabled.");
+  }
+} catch (error) {
+  console.error("Failed to initialize GoogleGenAI:", error);
+}
 
 const App: React.FC = () => {
+  console.log('App component rendering');
   const { language, setLanguage, t } = useLanguage();
   const [activeTab, setActiveTab] = useState<ActiveTab>('reading');
   const [passage, setPassage] = useState<string>('');
   const [headerBg, setHeaderBg] = useState<string | null>(null);
-  
+
   // Manage the selected day state
   const [selectedDay, setSelectedDay] = useState<number>(() => getDefaultDay(new Date()));
 
@@ -47,15 +61,17 @@ const App: React.FC = () => {
   useEffect(() => {
     document.documentElement.lang = language;
     document.title = t('appName');
-    
+
     // Generate Header Background Image
     const generateHeaderBg = async () => {
+      if (!ai) return;
+
       // Changed version to v2 to force update with new distinct silhouette prompt
       const cacheKey = 'header-sketch-bg-v2';
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
-          setHeaderBg(cached);
-          return;
+        setHeaderBg(cached);
+        return;
       }
 
       try {
@@ -65,7 +81,7 @@ const App: React.FC = () => {
           model: 'gemini-2.5-flash-image',
           contents: { parts: [{ text: prompt }] },
           config: {
-             imageConfig: { aspectRatio: "16:9" }
+            imageConfig: { aspectRatio: "16:9" }
           }
         });
 
@@ -89,19 +105,18 @@ const App: React.FC = () => {
     day: 'numeric',
     weekday: 'long',
   });
-  
+
   const readingRef = `${dailyReading[0].book} ${dailyReading[0].chapter}-${dailyReading[1].chapter}${language === 'ko' ? '장' : ''}`;
-  
+
   const storageKey = today.toISOString().split('T')[0]; // YYYY-MM-DD
 
   const NavButton = ({ tab, label }: { tab: ActiveTab; label: string }) => (
     <button
       onClick={() => setActiveTab(tab)}
-      className={`flex-1 py-3 px-2 text-sm md:text-base font-semibold transition-colors duration-300 rounded-t-lg relative z-10 ${
-        activeTab === tab 
-          ? 'bg-slate-800 text-sky-400' 
-          : 'bg-sky-800/60 text-sky-200 hover:bg-sky-700/80 backdrop-blur-sm'
-      }`}
+      className={`flex-1 py-3 px-2 text-sm md:text-base font-semibold transition-colors duration-300 rounded-t-lg relative z-10 ${activeTab === tab
+        ? 'bg-slate-800 text-sky-400'
+        : 'bg-sky-800/60 text-sky-200 hover:bg-sky-700/80 backdrop-blur-sm'
+        }`}
     >
       {label}
     </button>
@@ -110,9 +125,8 @@ const App: React.FC = () => {
   const LanguageButton = ({ lang, label }: { lang: 'ko' | 'en', label: string }) => (
     <button
       onClick={() => setLanguage(lang)}
-      className={`px-3 py-1 text-xs rounded-md transition-colors ${
-        language === lang ? 'bg-sky-200 text-sky-800 font-bold' : 'bg-transparent text-sky-200 hover:bg-sky-700'
-      }`}
+      className={`px-3 py-1 text-xs rounded-md transition-colors ${language === lang ? 'bg-sky-200 text-sky-800 font-bold' : 'bg-transparent text-sky-200 hover:bg-sky-700'
+        }`}
     >
       {label}
     </button>
@@ -123,7 +137,7 @@ const App: React.FC = () => {
       <header className="bg-sky-800 text-white shadow-lg sticky top-0 z-20 overflow-hidden border-b border-sky-700/50">
         {/* Sketch Background Layer - Increased opacity and adjusted blending */}
         {headerBg && (
-          <div 
+          <div
             className="absolute inset-0 z-0 opacity-70 bg-cover bg-center pointer-events-none transition-opacity duration-1000"
             style={{ backgroundImage: `url(${headerBg})`, mixBlendMode: 'soft-light' }}
           />
@@ -161,15 +175,15 @@ const App: React.FC = () => {
 
       <main className="container mx-auto p-4 md:p-6 relative z-10">
         {activeTab === 'reading' && (
-          <BibleReading 
-            reading={dailyReading} 
+          <BibleReading
+            reading={dailyReading}
             selectedDay={selectedDay}
             onDayChange={setSelectedDay}
-            onPassageLoaded={setPassage} 
+            onPassageLoaded={setPassage}
           />
         )}
         {activeTab === 'diary' && <FaithDiary storageKey={`diary-${storageKey}`} />}
-        {activeTab === 'mission' && (passage ? <EvangelismMission passage={passage} storageKey={`mission-${storageKey}`}/> : <div className="text-center p-8 bg-slate-800 rounded-lg">{t('readingFirst')}</div>) }
+        {activeTab === 'mission' && (passage ? <EvangelismMission passage={passage} storageKey={`mission-${storageKey}`} /> : <div className="text-center p-8 bg-slate-800 rounded-lg">{t('readingFirst')}</div>)}
         {activeTab === 'map' && <MissionMap />}
       </main>
 
