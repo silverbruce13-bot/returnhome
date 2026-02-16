@@ -6,10 +6,11 @@ import { Language } from "../i18n";
 
 let ai: GoogleGenAI | null = null;
 try {
-  if (process.env.API_KEY) {
-    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  if (apiKey) {
+    ai = new GoogleGenAI({ apiKey });
   } else {
-    console.warn("Gemini API Key is missing/undefined in environment.");
+    console.warn("Gemini API Key is missing/undefined in environment (VITE_GEMINI_API_KEY).");
   }
 } catch (error) {
   console.error("Failed to initialize GoogleGenAI instance:", error);
@@ -222,8 +223,8 @@ export async function generateComprehensiveReadingContent(book: string, chapter1
     }
 
     const response = await ai.models.generateContent({
-      // Complex Theological Reasoning
-      model: 'gemini-3-pro-preview',
+      // Optimized for cost and speed
+      model: 'gemini-1.5-flash',
       contents: p.comprehensiveReading,
       config: {
         responseMimeType: "application/json",
@@ -256,8 +257,7 @@ export async function generateEvangelismTips(passage: string, language: Language
   try {
     const p = getPrompts(language, '', 0, 0, passage);
     const response = await ai.models.generateContent({
-      // Basic Text Generation
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-1.5-flash',
       contents: p.evangelismTips,
     });
 
@@ -283,7 +283,7 @@ export async function generateContextImage({ initialPrompt, fallbackContext, lan
       try {
         if (!ai) throw new Error("AI not initialized");
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
+          model: 'gemini-1.5-flash-image',
           contents: {
             parts: [{ text: p }],
           },
@@ -348,7 +348,7 @@ export async function generateContextImage({ initialPrompt, fallbackContext, lan
     try {
       const promptGenResponse = await ai.models.generateContent({
         // Simple Task
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-1.5-flash',
         contents: language === 'en' ? fallbackPromptGenerator_en : fallbackPromptGenerator_ko,
       });
 
@@ -387,8 +387,7 @@ export async function recommendMusic(context: string, language: Language): Promi
     if (!ai) return [];
 
     const response = await ai.models.generateContent({
-      // Complex Reasoning for Music Selection
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-1.5-flash',
       contents: {
         parts: [{ text: p.recommendMusic }, { text: p.recommendMusicContextPrefix }]
       },
@@ -426,8 +425,7 @@ export async function generatePrayerGuide(passage: string, language: Language): 
     if (!ai) return getPrompts(language, '', 0, 0).prayerGuideError;
 
     const response = await ai.models.generateContent({
-      // Spiritual Mentoring - Reasoning
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-1.5-flash',
       contents: p.prayerGuide,
     });
 
@@ -444,8 +442,7 @@ export async function generateSermonOutline(passage: string, language: Language)
     if (!ai) return getPrompts(language, '', 0, 0).sermonOutlineError;
 
     const response = await ai.models.generateContent({
-      // Sermon Preparation - Reasoning
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-1.5-flash',
       contents: p.sermonOutline,
     });
 
@@ -462,8 +459,7 @@ export async function generateStoryKeywords(passage: string, language: Language)
     if (!ai) return null;
 
     const response = await ai.models.generateContent({
-      // Basic Extraction
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-1.5-flash',
       contents: p.storyKeywords,
       config: {
         responseMimeType: "application/json",
@@ -498,8 +494,7 @@ export async function explainPassageSelection(selectedText: string, passageConte
     if (!ai) return getPrompts(language, '', 0, 0, '', '').explainSelectionError;
 
     const response = await ai.models.generateContent({
-      // Complex Theological Explanation
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-1.5-flash',
       contents: p.explainSelection,
     });
 
@@ -528,8 +523,8 @@ export async function fetchPlaceInfo(city: string, journeyTitle: string, languag
     if (!ai) throw new Error("AI not initialized");
 
     const response = await ai.models.generateContent({
-      // Maps grounding is only supported in Gemini 2.5 series models.
-      model: 'gemini-2.5-flash',
+      // Maps grounding support varies; using current stable flash for best coverage.
+      model: 'gemini-1.5-flash',
       contents: prompt,
       config: {
         tools: [{ googleMaps: {} }],
@@ -565,7 +560,7 @@ export async function generateJourneyMap(title: string, cities: string[], langua
     if (!ai) return null;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-1.5-flash-image',
       contents: {
         parts: [{ text: p }]
       },

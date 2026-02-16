@@ -38,7 +38,7 @@ const StoryKeywordsComponent: React.FC<StoryKeywordsProps> = ({ passage }) => {
     } catch (e) {
       console.error("Failed to read story keywords from cache", e);
     }
-    
+
     setIsLoading(true);
     setError(null);
     try {
@@ -92,16 +92,16 @@ const StoryKeywordsComponent: React.FC<StoryKeywordsProps> = ({ passage }) => {
     <Card>
       <h2 className="text-2xl font-bold text-slate-100 mb-4 flex items-center">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 inline-block mr-3 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 0 1 0 2.828l-7 7a2 2 0 0 1-2.828 0l-7-7A2 2 0 0 1 3 12V7a4 4 0 0 1 4-4z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 0 1 0 2.828l-7 7a2 2 0 0 1-2.828 0l-7-7A2 2 0 0 1 3 12V7a4 4 0 0 1 4-4z" />
         </svg>
         <span>{t('storyKeywordsTitle')}</span>
       </h2>
-      
+
       {isLoading && <Spinner message={t('generatingKeywords')} />}
       {error && <p className="text-red-400 text-center mt-4 p-2 bg-red-500/10 rounded-lg">{error}</p>}
-      
+
       {!isLoading && keywords && (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <KeywordSection title={t('positiveMode')} keywords={keywords.positive} color="yellow" />
           <KeywordSection title={t('sinMode')} keywords={keywords.sin} color="pink" />
           <KeywordSection title={t('hopeMode')} keywords={keywords.hope} color="green" />

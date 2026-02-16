@@ -122,10 +122,10 @@ export const translations = {
     sermonApiError: "설교 개요를 생성하는 중 오류가 발생했습니다.",
     sermonPrompt: "오늘의 말씀을 바탕으로 성도들을 위한 실질적인 설교 개요를 작성해 보세요.",
     // Chat
-    chatWithAiTitle: "말씀 챗봇 (AI)",
-    chatPlaceholder: "궁금한 내용을 입력하세요...",
+    chatWithAiTitle: "가상 오케스트레이터 폴샘 (AI)",
+    chatPlaceholder: "바울 선생님께 궁금한 점을 질문해보세요...",
     sendButton: "전송",
-    aiThinking: "답변을 생각 중입니다...",
+    aiThinking: "폴샘이 기도하며 답변을 준비 중입니다...",
     // Story Keywords
     storyKeywordsTitle: "오늘의 스토리 키워드 (AI)",
     generatingKeywords: "스토리 키워드를 추출하는 중...",
@@ -138,13 +138,17 @@ export const translations = {
     english: "English",
     // Offline/Network
     offlineError: "이 기능을 사용하려면 인터넷 연결이 필요합니다.",
-    chatOffline: "챗봇 기능은 온라인 상태에서만 사용할 수 있습니다.",
+    chatOffline: "폴샘과의 대화는 온라인 상태에서만 가능합니다.",
     // Verse Explanation
     explainSelection: "의미 물어보기",
     explanationModalTitle: "깊이 있는 해설 (AI)",
     selectedTextLabel: "선택한 구절:",
     generatingExplanation: "해설을 생성하는 중입니다...",
-    explanationApiError: "해설을 생성하는 중 오류가 발생했습니다.",
+    explanationApiError: "An error occurred while generating the explanation.",
+    // ReturnHome Link
+    returnHomeTitle: "바울과 함께 하는 40일간의 선교여정",
+    returnHomeDesc: "바울의 발자취를 따라가는 40일간의 깊이 있는 묵상과 체험, 지금 'ReturnHome' 앱에서 함께 시작해보세요.",
+    returnHomeButton: "서신서 묵상 시작하기",
   },
   en: {
     appName: "Return Journey: The Way Back Home",
@@ -287,6 +291,10 @@ export const translations = {
     selectedTextLabel: "Selected Verse:",
     generatingExplanation: "Generating explanation...",
     explanationApiError: "An error occurred while generating the explanation.",
+    // ReturnHome Link
+    returnHomeTitle: "40 Days Mission Journey with Paul",
+    returnHomeDesc: "Follow Paul's footsteps through a 40-day deep meditation and experience. Start together now on the 'ReturnHome' app.",
+    returnHomeButton: "Start Epistle Meditation",
   }
 };
 

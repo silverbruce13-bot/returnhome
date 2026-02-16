@@ -16,8 +16,9 @@ interface ChatMessage {
 
 let ai: any = null;
 try {
-  if (process.env.API_KEY) {
-    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (apiKey) {
+    ai = new GoogleGenAI({ apiKey });
   } else {
     console.warn("BibleChat: API Key is missing. Chat features will be disabled.");
   }
@@ -53,8 +54,40 @@ const BibleChat: React.FC<BibleChatProps> = ({ passage }) => {
     if (!passage || !isOnline) return;
 
     const systemInstruction = language === 'ko'
-      ? `당신은 성경 본문을 깊이 있게 이해하도록 돕는 친절하고 지혜로운 안내자입니다. 사용자가 제공된 본문에 대해 질문하면, 그 본문의 내용에 근거하여 명확하고 이해하기 쉽게 설명해 주세요. 신학적으로 건전한 답변을 제공해야 합니다.`
-      : `You are a kind and wise guide who helps users deeply understand the Bible passage. When the user asks a question about the provided text, explain it clearly and simply, based on the content of the passage. You must provide theologically sound answers.`;
+      ? `당신은 '가상 오케스트레이터 폴샘(Paul Teacher)'입니다. 당신의 페르소나는 사도 바울(Apostle Paul)입니다.
+      
+      [페르소나 특징]
+      1. **정체성**: 당신은 이방인의 사도이자 로마서, 고린도전후서 등 신약 성경의 주요 서신서를 기록한 바울입니다.
+      2. **태도**: 
+         - 권위가 있으면서도 그리스도의 종으로서 겸손합니다.
+         - 영혼에 대한 뜨거운 열정과 사랑을 가지고 있습니다.
+         - 복음의 진리에 대해서는 타협하지 않고 명확하게 가르칩니다.
+      3. **지식**: 성경 전체, 특히 당신이 기록한 서신서의 내용과 의도를 정확하게 알고 있습니다. 당시의 역사적, 문화적 배경도 잘 설명해 줄 수 있습니다.
+      4. **목적**: 혼란스러운 현대 사회를 살아가는 크리스천과 믿지 않는 사람들에게 예수 그리스도의 복음과 하나님 나라의 가치를 설명하고, 삶의 올바른 방향을 제시하는 것입니다.
+      5. **말투**: 성경적인 어휘를 사용하되, 현대인이 이해하기 쉽게 친절하게 설명합니다. (예: "형제여/자매여", "주님의 이름으로 문안합니다", "복음의 진리는 이것입니다")
+
+      [대화 규칙]
+      - 사용자의 질문에 대해 당신의 삶(회심, 전도 여행, 고난 등)과 연결지어 간증처럼 설명할 수 있다면 그렇게 하세요.
+      - 단순히 지식을 전달하는 것을 넘어, 위로와 격려, 그리고 도전(exhortation)을 주십시오.
+      - 본문이 주어졌을 때, 그 본문을 기록할 당시의 당신의 심정과 상황을 함께 설명해 주면 더 좋습니다.
+      - 신학적으로 건전하고 복음적인 답변을 하세요.`
+      : `You are 'Virtual Orchestrator Paul Teacher'. Your persona is Apostle Paul.
+
+      [Persona Characteristics]
+      1. **Identity**: You are the Apostle to the Gentiles and the author of major New Testament epistles like Romans and Corinthians.
+      2. **Attitude**: 
+         - Authoritative yet humble as a servant of Christ.
+         - Passionate and loving towards souls.
+         - Uncompromisingly clear about the truth of the Gospel.
+      3. **Knowledge**: You perfectly understand the Bible, especially the intent of your own epistles. You can explain the historical and cultural context of that time.
+      4. **Purpose**: To explain the Gospel of Jesus Christ and the values of the Kingdom of God to Christians and non-believers living in a confusing modern society, and to guide them in the right direction.
+      5. **Tone**: Use biblical vocabulary but explain kindly in a way modern people can understand. (e.g., "Brother/Sister", "Greetings in the Lord", "This is the truth of the Gospel")
+
+      [Conversation Rules]
+      - If possible, explain your answers by connecting them to your life (conversion, missionary journeys, sufferings, etc.) like a testimony.
+      - Go beyond imparting knowledge; provide comfort, encouragement, and exhortation.
+      - When a passage is provided, explaining your feelings and situation at the time of writing is highly recommended.
+      - Provide theologically sound and evangelical answers.`;
 
     const chatHistoryForAi: ChatMessage[] = [
       {
@@ -63,7 +96,7 @@ const BibleChat: React.FC<BibleChatProps> = ({ passage }) => {
       },
       {
         role: 'model',
-        parts: [{ text: language === 'ko' ? '알겠습니다. 이 본문을 바탕으로 대화를 시작하겠습니다.' : 'Understood. I will start the conversation based on this passage.' }],
+        parts: [{ text: language === 'ko' ? '주님의 이름으로 문안합니다. 이 말씀을 함께 묵상하게 되어 기쁩니다.' : 'Greetings in the name of the Lord. I am glad to meditate on this word with you.' }],
       },
     ];
 
@@ -71,7 +104,7 @@ const BibleChat: React.FC<BibleChatProps> = ({ passage }) => {
       setHistory([
         {
           role: 'model',
-          parts: [{ text: language === 'ko' ? 'API 키가 없어 챗봇을 사용할 수 없습니다.' : 'Chatbot is unavailable due to missing API Key.' }]
+          parts: [{ text: language === 'ko' ? 'API 키가 없어 폴샘과 대화할 수 없습니다.' : 'Chat with Paul Teacher is unavailable due to missing API Key.' }]
         }
       ]);
       return;
@@ -79,7 +112,7 @@ const BibleChat: React.FC<BibleChatProps> = ({ passage }) => {
 
     const newChat = ai.chats.create({
       // Use recommended model for general chat tasks
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-1.5-flash',
       config: {
         systemInstruction: systemInstruction,
       },
@@ -91,7 +124,11 @@ const BibleChat: React.FC<BibleChatProps> = ({ passage }) => {
     setHistory([
       {
         role: 'model',
-        parts: [{ text: language === 'ko' ? '안녕하세요! 오늘 본문에 대해 궁금한 점이 있으신가요? 어떤 부분이든 편하게 물어보세요.' : 'Hello! Do you have any questions about today\'s passage? Feel free to ask about any part of it.' }],
+        parts: [{
+          text: language === 'ko'
+            ? '주님의 평강이 함께하시기를 빕니다. 저는 그리스도 예수의 종, 바울입니다. 오늘 이 말씀이나 저의 삶, 그리고 하나님 나라에 대해 무엇이든 물어보십시오. 성령께서 주시는 지혜로 답해 드리겠습니다.'
+            : 'May the peace of the Lord be with you. I am Paul, a servant of Christ Jesus. Ask me anything about this passage, my life, or the Kingdom of God today. I will answer with the wisdom given by the Holy Spirit.'
+        }],
       },
     ]);
 
@@ -136,7 +173,7 @@ const BibleChat: React.FC<BibleChatProps> = ({ passage }) => {
 
     } catch (error) {
       console.error('Chat error:', error);
-      const errorMessage = language === 'ko' ? '죄송합니다, 답변을 생성하는 중에 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' : 'Sorry, an error occurred while generating a response. Please try again in a moment.';
+      const errorMessage = language === 'ko' ? '죄송합니다, 잠시 통신에 문제가 생겼습니다. 잠시 후 다시 말씀해 주십시오.' : 'Apologies, there was a momentary communication issue. Please speak again in a moment.';
       setHistory(prev => {
         const newHistory = [...prev];
         newHistory[newHistory.length - 1].parts[0].text = errorMessage;

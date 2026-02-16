@@ -60,6 +60,29 @@ const BibleReading: React.FC<BibleReadingProps> = ({ reading, selectedDay, onDay
     content: '',
   });
 
+  const getBookCode = (bookItem: any): string => {
+    // Handle both string and object formats from readingPlan
+    const name = typeof bookItem === 'string' ? bookItem : (bookItem.en || bookItem.ko);
+    const map: Record<string, string> = {
+      'Genesis': 'gen', 'Exodus': 'exo', 'Leviticus': 'lev', 'Numbers': 'num', 'Deuteronomy': 'deu',
+      'Joshua': 'jos', 'Judges': 'jdg', 'Ruth': 'rut', '1 Samuel': 'sa1', '2 Samuel': 'sa2',
+      '1 Kings': 'ki1', '2 Kings': 'ki2', '1 Chronicles': 'ch1', '2 Chronicles': 'ch2',
+      'Ezra': 'ezr', 'Nehemiah': 'neh', 'Esther': 'est', 'Job': 'job', 'Psalms': 'psa',
+      'Proverbs': 'pro', 'Ecclesiastes': 'ecc', 'Song of Solomon': 'sol', 'Isaiah': 'isa',
+      'Jeremiah': 'jer', 'Lamentations': 'lam', 'Ezekiel': 'eze', 'Daniel': 'dan',
+      'Hosea': 'hos', 'Joel': 'joe', 'Amos': 'amo', 'Obadiah': 'oba', 'Jonah': 'jon',
+      'Micah': 'mic', 'Nahum': 'nah', 'Habakkuk': 'hab', 'Zephaniah': 'zep', 'Haggai': 'hag',
+      'Zechariah': 'zec', 'Malachi': 'mal', 'Matthew': 'mat', 'Mark': 'mar', 'Luke': 'luk',
+      'John': 'joh', 'Acts': 'act', 'Romans': 'rom', '1 Corinthians': 'co1', '2 Corinthians': 'co2',
+      'Galatians': 'gal', 'Ephesians': 'eph', 'Philippians': 'phi', 'Colossians': 'col',
+      '1 Thessalonians': 'th1', '2 Thessalonians': 'th2', '1 Timothy': 'ti1', '2 Timothy': 'ti2',
+      'Titus': 'tit', 'Philemon': 'phm', 'Hebrews': 'heb', 'James': 'jam', '1 Peter': 'pe1',
+      '2 Peter': 'pe2', '1 John': 'jo1', '2 John': 'jo2', '3 John': 'jo3', 'Jude': 'jud',
+      'Revelation': 'rev'
+    };
+    return map[name] || name.toLowerCase().substring(0, 3);
+  };
+
   const fullSchedule = useMemo(() => getFullSchedule(language), [language]);
 
   useEffect(() => {
@@ -166,7 +189,7 @@ const BibleReading: React.FC<BibleReadingProps> = ({ reading, selectedDay, onDay
       setSelectionPopover({
         visible: true,
         x: rect.left - containerRect.left + rect.width / 2,
-        y: rect.top - containerRect.top,
+        y: rect.top - containerRect.top + passageContainerRef.current.scrollTop,
       });
     } else {
       setSelectionPopover({ visible: false, x: 0, y: 0 });
@@ -249,6 +272,24 @@ const BibleReading: React.FC<BibleReadingProps> = ({ reading, selectedDay, onDay
     setError(null);
     setContextImageUrl(null);
     setIsImageLoading(false);
+
+    let fetchedPassage = '';
+
+    // 1. Try fetching RNKV from our Local API
+    try {
+      const bookCode = getBookCode(reading[0].book);
+      const chapter = reading[0].chapter;
+      const res = await fetch(`/api/scrape-bible?book=${bookCode}&chapter=${chapter}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.verses && data.verses.length > 0) {
+          fetchedPassage = data.verses.map((v: any) => `${v.verse}. ${v.text}`).join('\\n');
+        }
+      }
+    } catch (e) {
+      console.warn("Local API fetch failed, responding with AI only", e);
+    }
+
     try {
       const comprehensiveData = await generateComprehensiveReadingContent(reading[0].book, reading[0].chapter, reading[1].chapter, language);
 
@@ -256,8 +297,12 @@ const BibleReading: React.FC<BibleReadingProps> = ({ reading, selectedDay, onDay
         throw new Error("Failed to get data from API.");
       }
 
-      setPassage(comprehensiveData.passage);
-      onPassageLoaded(comprehensiveData.passage);
+      // USE RNKV text if we got it, otherwise use AI text
+      const finalPassage = fetchedPassage || comprehensiveData.passage;
+
+      setPassage(finalPassage);
+      onPassageLoaded(finalPassage);
+
       setMeditationGuide(comprehensiveData.meditationGuide);
       setPassageContext(comprehensiveData.context);
       setPassageIntention(comprehensiveData.intention);
@@ -277,6 +322,7 @@ const BibleReading: React.FC<BibleReadingProps> = ({ reading, selectedDay, onDay
 
       const dataToCache: CachedReadingData = {
         ...comprehensiveData,
+        passage: finalPassage,
         contextImageUrl: imageUrl,
       };
       safeSetItem(cacheKey, JSON.stringify(dataToCache));
@@ -298,6 +344,7 @@ const BibleReading: React.FC<BibleReadingProps> = ({ reading, selectedDay, onDay
     fetchContent();
   }, [fetchContent]);
 
+  /* Use a capturing group to keep the delimiters in the result array */
   const readingPlanInfoParts = t('readingPlanInfo').split(/\{(\w+)\}/);
   const isTodayArchived = !!archivedReadings[selectedDay];
 
@@ -329,96 +376,73 @@ const BibleReading: React.FC<BibleReadingProps> = ({ reading, selectedDay, onDay
         </div>
         {isTocVisible && (
           <div className="mt-4 border-t border-slate-700 pt-4">
-            <p className="text-sm text-slate-400 mb-2">
+            <p className="text-sm text-slate-400 mb-4">
               {readingPlanInfoParts.map((part, i) => {
                 if (part === 'totalDays') return <strong key={i} className="text-sky-400">{totalDays}</strong>;
                 if (part === 'currentDay') return <strong key={i} className="text-sky-400">{selectedDay}</strong>;
                 return <span key={i}>{part}</span>
               })}
             </p>
-            <div className="text-sm text-slate-400 mb-3 p-2 bg-slate-900 rounded-md border border-slate-700">
-              <strong>{t('meditationRecordGuide')}</strong> {t('meditationRecordInstruction')}
-              <br />
-              <span className="font-semibold text-green-400">{t('meditationGood').split(': ')[0]}:</span> {t('meditationGood').split(': ')[1]},{' '}
-              <span className="font-semibold text-amber-400">{t('meditationOk').split(': ')[0]}:</span> {t('meditationOk').split(': ')[1]},{' '}
-              <span className="font-semibold text-red-400">{t('meditationBad').split(': ')[0]}:</span> {t('meditationBad').split(': ')[1]}
+
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 pr-1">
+              {fullSchedule.map(item => {
+                const status = meditationStatus[item.day];
+                const isArchived = !!archivedReadings[item.day];
+                const isSelected = item.day === selectedDay;
+
+                let bgClass = 'bg-slate-700 hover:bg-slate-600 text-slate-300';
+                let borderClass = 'border-slate-600';
+
+                if (status === 'good') {
+                  bgClass = 'bg-green-600 text-white hover:bg-green-500';
+                  borderClass = 'border-green-400';
+                } else if (status === 'ok') {
+                  bgClass = 'bg-amber-600 text-white hover:bg-amber-500';
+                  borderClass = 'border-amber-400';
+                } else if (status === 'bad') {
+                  bgClass = 'bg-red-600 text-white hover:bg-red-500';
+                  borderClass = 'border-red-400';
+                }
+
+                if (isSelected) {
+                  borderClass = 'text-white ring-2 ring-white ring-offset-2 ring-offset-slate-900 font-bold ' + bgClass; // Combine for selected state
+                } else {
+                  borderClass = `border ${borderClass}`;
+                }
+
+                return (
+                  <button
+                    key={item.day}
+                    onClick={() => onDayChange(item.day)}
+                    title={`${t('day', { day: item.day })}: ${item.reading}`}
+                    className={`
+                        h-9 rounded-lg flex flex-col items-center justify-center p-0.5 transition-all duration-200 relative
+                        ${bgClass} ${isSelected ? 'ring-2 ring-sky-400 ring-offset-2 ring-offset-slate-800 z-10 scale-105' : borderClass}
+                      `}
+                  >
+                    <span className="text-[10px] font-mono opacity-70 mb-0.5">{item.day}</span>
+                    <span className="text-[10px] leading-tight text-center break-keep line-clamp-1 w-full px-1">
+                      {item.reading.replace(/[0-9]+(-[0-9]+)?장?/, '').trim() || item.reading}
+                    </span>
+
+                    {status && (
+                      <div className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-white/50'}`} />
+                    )}
+
+                    {isArchived && (
+                      <div className="absolute bottom-1 w-full flex justify-center">
+                        <div className="w-1 h-1 rounded-full bg-white/70"></div>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-            <div className="max-h-80 overflow-y-auto pr-2">
-              <ul className="space-y-1">
-                {fullSchedule.map(item => {
-                  const status = meditationStatus[item.day];
-                  const isArchived = !!archivedReadings[item.day];
-                  const isSelected = item.day === selectedDay;
 
-                  const liClasses = ['p-2 rounded-md transition-all text-sm flex justify-between items-center group'];
-
-                  if (status === 'good') liClasses.push('bg-green-500/10 text-green-400 border border-green-500/20');
-                  else if (status === 'ok') liClasses.push('bg-amber-500/10 text-amber-400 border border-amber-500/20');
-                  else if (status === 'bad') liClasses.push('bg-red-500/10 text-red-400 border border-red-500/20');
-                  else if (isSelected) liClasses.push('bg-sky-500/10 text-sky-400 font-bold border border-sky-500/30');
-                  else liClasses.push('text-slate-300 border border-transparent');
-
-                  if (isSelected) liClasses.push('ring-2 ring-sky-400');
-
-                  return (
-                    <li key={item.day} className={liClasses.join(' ')}>
-                      <div className="flex items-center flex-grow overflow-hidden">
-                        <span className="font-mono mr-3 text-slate-500 w-16 inline-block flex-shrink-0">{t('day', { day: item.day })}:</span>
-                        <span className="truncate">{item.reading}</span>
-                        <div className="ml-2 flex space-x-2">
-                          {!isSelected && (
-                            <button
-                              onClick={() => onDayChange(item.day)}
-                              className="px-2 py-0.5 text-[10px] bg-sky-600/20 text-sky-400 border border-sky-400/30 rounded hover:bg-sky-600 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500 opacity-0 group-hover:opacity-100"
-                              title={t('jumpToDay')}
-                            >
-                              {t('jumpToDay')}
-                            </button>
-                          )}
-                          {isArchived && (
-                            <button
-                              onClick={() => setViewingArchivedDay(item.day)}
-                              className="px-2 py-0.5 text-[10px] bg-slate-600 text-slate-300 rounded hover:bg-slate-500 transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500"
-                              title={t('reviewButton')}
-                            >
-                              {t('reviewButton')}
-                            </button>
-                          )}
-                          {isSelected && (
-                            <span className="px-2 py-0.5 text-[10px] bg-sky-500 text-white rounded font-bold flex items-center">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                              </svg>
-                              {t('currentReadingMark')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-1.5 ml-2 flex-shrink-0">
-                        <button
-                          title={t('meditationGoodTooltip')}
-                          onClick={() => handleStatusChange(item.day, 'good')}
-                          className={`w-5 h-5 rounded-full transition-colors hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 ${status === 'good' ? 'bg-green-500 ring-green-400' : 'bg-slate-600 hover:bg-green-500 ring-transparent'}`}
-                          aria-pressed={status === 'good'}
-                        />
-                        <button
-                          title={t('meditationOkTooltip')}
-                          onClick={() => handleStatusChange(item.day, 'ok')}
-                          className={`w-5 h-5 rounded-full transition-colors hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 ${status === 'ok' ? 'bg-amber-500 ring-amber-400' : 'bg-slate-600 hover:bg-amber-500 ring-transparent'}`}
-                          aria-pressed={status === 'ok'}
-                        />
-                        <button
-                          title={t('meditationBadTooltip')}
-                          onClick={() => handleStatusChange(item.day, 'bad')}
-                          className={`w-5 h-5 rounded-full transition-colors hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 ${status === 'bad' ? 'bg-red-500 ring-red-400' : 'bg-slate-600 hover:bg-red-500 ring-transparent'}`}
-                          aria-pressed={status === 'bad'}
-                        />
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
+            <div className="mt-6 p-3 bg-slate-900/50 rounded-xl border border-slate-700/50 text-xs text-slate-400 flex flex-wrap gap-4 justify-center">
+              <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-green-600 mr-2"></div>{t('meditationGood')}</div>
+              <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-amber-600 mr-2"></div>{t('meditationOk')}</div>
+              <div className="flex items-center"><div className="w-3 h-3 rounded-full bg-red-600 mr-2"></div>{t('meditationBad')}</div>
             </div>
           </div>
         )}

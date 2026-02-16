@@ -7,18 +7,18 @@ import FaithDiary from './components/FaithDiary';
 import EvangelismMission from './components/EvangelismMission';
 import MissionMap from './components/MissionMap';
 import { useLanguage } from './i18n';
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 console.log("Initializing App.tsx module");
 
 let ai: GoogleGenAI | null = null;
 try {
-  const apiKey = process.env.API_KEY;
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   console.log("API Key present:", !!apiKey);
   if (apiKey) {
     ai = new GoogleGenAI({ apiKey });
   } else {
-    console.warn("API Key is missing. AI features will be disabled.");
+    console.warn("API Key is missing (VITE_GEMINI_API_KEY). AI features will be disabled.");
   }
 } catch (error) {
   console.error("Failed to initialize GoogleGenAI:", error);
@@ -78,7 +78,7 @@ const App: React.FC = () => {
         // Prompt updated for clearer silhouettes and higher contrast
         const prompt = "An artistic pencil and ink sketch with vibrant but soft watercolor wash. The central figures are Jesus and a small child walking together, shown as BOLD AND DISTINCT SILHOUETTES with CLEAR OUTLINES. They are walking in a peaceful field during a golden sunset. High contrast between the figures and the warm glowing background. Ethereal, hand-drawn fine art style, minimalist but emotionally evocative.";
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
+          model: 'gemini-1.5-flash-image',
           contents: { parts: [{ text: prompt }] },
           config: {
             imageConfig: { aspectRatio: "16:9" }
@@ -149,15 +149,20 @@ const App: React.FC = () => {
           <div className="absolute top-3 left-4 hidden md:block">
             <span className="font-bold text-white tracking-widest text-sm uppercase opacity-80">Live in Wonder</span>
           </div>
-          <div className="absolute top-2 right-2 flex space-x-1 border border-sky-600 rounded-lg p-0.5 bg-sky-900/40 backdrop-blur-sm">
-            <LanguageButton lang="ko" label={t('korean')} />
-            <LanguageButton lang="en" label={t('english')} />
+          <div className="absolute top-2 right-2 flex flex-col items-end space-y-1">
+            <div className="flex space-x-1 border border-sky-600 rounded-lg p-0.5 bg-sky-900/40 backdrop-blur-sm">
+              <LanguageButton lang="ko" label={t('korean')} />
+              <LanguageButton lang="en" label={t('english')} />
+            </div>
+            <p className="text-xs text-sky-200 font-medium drop-shadow-md text-right bg-sky-900/30 px-2 py-0.5 rounded backdrop-blur-sm">
+              {todayDateString}
+            </p>
           </div>
           <p className="text-sm md:text-base text-sky-100 font-medium drop-shadow-md">{t('headerSubtitle')}</p>
           <h1 className="text-xl md:text-3xl font-bold mt-1 tracking-wider drop-shadow-lg text-white">
             {t('headerTitle')}
           </h1>
-          <p className="mt-4 text-sky-100 text-sm md:text-base drop-shadow-md">{todayDateString}</p>
+
           <div className="mt-1 flex flex-col md:flex-row items-center justify-center gap-2">
             <span className="bg-sky-700/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-sky-200 border border-sky-500/30">
               {t('day', { day: selectedDay })}
