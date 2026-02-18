@@ -21,9 +21,14 @@ const Auth: React.FC = () => {
                 const { error } = await supabase.auth.signUp({
                     email,
                     password,
+                    options: { data: { display_name: email.split('@')[0] } },
                 });
                 if (error) throw error;
-                setMessage({ type: 'success', text: '가입 완료! 이메일을 확인해주세요.' });
+                // 가입 후 바로 자동 로그인 시도
+                const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+                if (loginError) {
+                    setMessage({ type: 'success', text: '가입 완료! 이메일 확인 후 로그인해주세요.' });
+                }
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
@@ -73,6 +78,7 @@ const Auth: React.FC = () => {
                             required
                             minLength={6}
                         />
+                        <p className="text-xs text-slate-500 mt-1 px-1">6자 이상</p>
                     </div>
 
                     {message && (
