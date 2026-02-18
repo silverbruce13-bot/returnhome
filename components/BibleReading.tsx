@@ -275,19 +275,46 @@ const BibleReading: React.FC<BibleReadingProps> = ({ reading, selectedDay, onDay
 
     let fetchedPassage = '';
 
-    // 1. Try fetching RNKV from our Local API
+    // 1. Try loading from LOCAL JSON files first (instant!)
     try {
       const bookCode = getBookCode(reading[0].book);
-      const chapter = reading[0].chapter;
-      const res = await fetch(`/api/scrape-bible?book=${bookCode}&chapter=${chapter}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.verses && data.verses.length > 0) {
-          fetchedPassage = data.verses.map((v: any) => `${v.verse}. ${v.text}`).join('\\n');
+      const results: string[] = [];
+
+      for (const item of reading) {
+        const code = getBookCode(item.book);
+        const chapter = item.chapter;
+        try {
+          // Import from local JSON (bundled by Vite)
+          const localData = await import(`../data/bible/${code}/${chapter}.json`);
+          if (localData.verses && localData.verses.length > 0) {
+            const header = `[ ${item.book} ${chapter}${language === 'ko' ? '장' : ''} ]`;
+            const text = localData.verses.map((v: any) => `${v.verse}. ${v.text}`).join('\n');
+            results.push(`${header}\n${text}`);
+          }
+        } catch (localErr) {
+          console.log(`Local data not found for ${code}/${chapter}, trying API...`);
+          // Fallback to API if local file doesn't exist
+          try {
+            const res = await fetch(`/api/scrape-bible?book=${code}&chapter=${chapter}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.verses && data.verses.length > 0) {
+                const header = `[ ${item.book} ${chapter}${language === 'ko' ? '장' : ''} ]`;
+                const text = data.verses.map((v: any) => `${v.verse}. ${v.text}`).join('\n');
+                results.push(`${header}\n${text}`);
+              }
+            }
+          } catch (apiErr) {
+            console.warn("API fetch also failed for", code, chapter, apiErr);
+          }
         }
       }
+
+      if (results.length > 0) {
+        fetchedPassage = results.join('\n\n');
+      }
     } catch (e) {
-      console.warn("Local API fetch failed, responding with AI only", e);
+      console.warn("Bible text loading failed", e);
     }
 
     try {
