@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { LanguageProvider } from './i18n';
+import { AuthProvider } from './context/AuthContext';
 
 const rootElement = document.getElementById('root');
 console.log('rootElement:', rootElement);
@@ -13,8 +14,10 @@ const root = ReactDOM.createRoot(rootElement);
 console.log('Rendering root...');
 root.render(
   <React.StrictMode>
-    <LanguageProvider>
-      <App />
-    </LanguageProvider>
+    <AuthProvider>
+      <LanguageProvider>
+        <App />
+      </LanguageProvider>
+    </AuthProvider>
   </React.StrictMode>
 );

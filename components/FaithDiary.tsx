@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { DiaryEntry, SavedDiaryEntry } from '../types';
 import { getDiaryEntries, saveDiaryEntries } from '../services/syncService';
+import { supabase } from '../services/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 import Card from './common/Card';
 import Spinner from './common/Spinner';
 import MusicRecommendation from './MusicRecommendation';
@@ -37,6 +39,7 @@ const useLocalStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch<R
 
 const FaithDiary: React.FC<FaithDiaryProps> = ({ storageKey }) => {
   const { language, t } = useLanguage();
+  const { user } = useAuth();
   const [currentEntry, setCurrentEntry] = useLocalStorage<DiaryEntry>(`${storageKey}-current`, {
     repentance: '',
     resolve: '',
@@ -46,20 +49,40 @@ const FaithDiary: React.FC<FaithDiaryProps> = ({ storageKey }) => {
   const [isSyncing, setIsSyncing] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
 
+  // Fetch entries from Supabase or LocalStorage
   useEffect(() => {
     const fetchEntries = async () => {
-        setIsSyncing(true);
-        try {
-            const entries = await getDiaryEntries(`${storageKey}-saved`);
-            setSavedEntries(entries);
-        } catch (error) {
-            console.error("Failed to fetch diary entries:", error);
-        } finally {
-            setIsSyncing(false);
+      setIsSyncing(true);
+      try {
+        if (user) {
+          // Fetch from Supabase if logged in
+          const { data, error } = await supabase
+            .from('diary_entries')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+
+          // Transform Supabase data to app format
+          const entries: SavedDiaryEntry[] = (data || []).map((row: any) => ({
+            id: row.id,
+            timestamp: new Date(row.created_at).toLocaleString(),
+            content: row.content,
+          }));
+          setSavedEntries(entries);
+        } else {
+          // Fallback to LocalStorage
+          const entries = await getDiaryEntries(`${storageKey}-saved`);
+          setSavedEntries(entries);
         }
+      } catch (error) {
+        console.error("Failed to fetch diary entries:", error);
+      } finally {
+        setIsSyncing(false);
+      }
     };
     fetchEntries();
-  }, [storageKey]);
+  }, [storageKey, user]);
 
   const handleChange = (field: keyof DiaryEntry, value: string) => {
     setCurrentEntry({ ...currentEntry, [field]: value });
@@ -69,16 +92,20 @@ const FaithDiary: React.FC<FaithDiaryProps> = ({ storageKey }) => {
     if (!currentEntry.repentance.trim() && !currentEntry.resolve.trim() && !currentEntry.dream.trim()) {
       return; // Don't save empty entries
     }
-    
+
     const locale = language === 'ko' ? 'ko-KR' : 'en-US';
+    const timestamp = new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: true });
+
     const newEntry: SavedDiaryEntry = {
-      id: Date.now(),
-      timestamp: new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: true }),
+      id: Date.now(), // Temporary ID for optimistic UI
+      timestamp: timestamp,
       content: currentEntry,
     };
 
+    // Optimistic Update
     const newEntries = [newEntry, ...savedEntries];
-    setSavedEntries(newEntries); // Optimistic update
+    setSavedEntries(newEntries);
+
     setCurrentEntry({
       repentance: '',
       resolve: '',
@@ -89,14 +116,30 @@ const FaithDiary: React.FC<FaithDiaryProps> = ({ storageKey }) => {
     setTimeout(() => setIsSaved(false), 2000);
 
     try {
+      if (user) {
+        // Save to Supabase
+        const { error } = await supabase
+          .from('diary_entries')
+          .insert([
+            {
+              user_id: user.id,
+              content: currentEntry,
+              created_at: new Date().toISOString()
+            }
+          ]);
+
+        if (error) throw error;
+      } else {
+        // Save to LocalStorage
         await saveDiaryEntries(`${storageKey}-saved`, newEntries);
+      }
     } catch (error) {
-        console.error("Failed to save diary entries:", error);
-        // In a real app, you might revert the state and show an error message.
-        setSavedEntries(savedEntries); // Revert on error
+      console.error("Failed to save diary entries:", error);
+      // Revert optimistic update on error would go here
+      alert("Failed to save to cloud. Please check your connection.");
     }
   };
-  
+
   const diaryContext = useMemo(() => {
     if (savedEntries.length === 0) {
       return "";
@@ -113,7 +156,11 @@ const FaithDiary: React.FC<FaithDiaryProps> = ({ storageKey }) => {
   return (
     <div className="space-y-6">
       <Card>
-        <h2 className="text-2xl font-bold text-slate-100 mb-4">{t('diaryTitle')}</h2>
+        <h2 className="text-2xl font-bold text-slate-100 mb-4 flex justify-between items-center">
+          <span>{t('diaryTitle')}</span>
+          {user && <span className="text-xs font-normal text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded">Cloud Sync Active</span>}
+        </h2>
+
         <div className="space-y-6">
           <div>
             <label htmlFor="repentance" className="block text-lg font-semibold text-slate-100 mb-2">
@@ -182,7 +229,7 @@ const FaithDiary: React.FC<FaithDiaryProps> = ({ storageKey }) => {
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      {t('savedAt', { time: entry.timestamp })}
+                      {language === 'ko' ? entry.timestamp : new Date(entry.timestamp).toLocaleString()}
                     </p>
                   </div>
                   <div className="space-y-4">
@@ -211,8 +258,8 @@ const FaithDiary: React.FC<FaithDiaryProps> = ({ storageKey }) => {
           )}
         </div>
       </Card>
-      <MusicRecommendation 
-        context={diaryContext} 
+      <MusicRecommendation
+        context={diaryContext}
         title={t('diaryMusicTitle')}
         id="diary-music-recommender"
       />

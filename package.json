@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.25.0",
+    "@supabase/supabase-js": "^2.96.0",
     "iconv-lite": "^0.7.2",
     "node-fetch": "^3.3.2",
     "react": "^19.2.0",

@@ -9,6 +9,10 @@ import MissionMap from './components/MissionMap';
 import { useLanguage } from './i18n';
 import { GoogleGenAI } from "@google/genai";
 
+import { useAuth } from './context/AuthContext';
+import Auth from './components/Auth';
+import Spinner from './components/common/Spinner';
+
 console.log("Initializing App.tsx module");
 
 let ai: GoogleGenAI | null = null;
@@ -27,6 +31,7 @@ try {
 const App: React.FC = () => {
   console.log('App component rendering');
   const { language, setLanguage, t } = useLanguage();
+  const { user, loading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>('reading');
   const [passage, setPassage] = useState<string>('');
   const [headerBg, setHeaderBg] = useState<string | null>(null);
@@ -132,22 +137,49 @@ const App: React.FC = () => {
     </button>
   );
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <Spinner message="Preparing your journey..." />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-slate-300 flex flex-col">
+        <header className="bg-sky-800 text-white shadow-lg p-6 text-center">
+          <h1 className="text-2xl font-bold">{t('headerTitle')}</h1>
+        </header>
+        <main className="flex-1 container mx-auto p-4 flex items-center justify-center">
+          <Auth />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 font-sans text-slate-300">
       <header className="bg-sky-800 text-white shadow-lg sticky top-0 z-20 overflow-hidden border-b border-sky-700/50">
-        {/* Sketch Background Layer - Increased opacity and adjusted blending */}
+        {/* Sketch Background Layer */}
         {headerBg && (
           <div
             className="absolute inset-0 z-0 opacity-70 bg-cover bg-center pointer-events-none transition-opacity duration-1000"
             style={{ backgroundImage: `url(${headerBg})`, mixBlendMode: 'soft-light' }}
           />
         )}
-        {/* Subtle Gradient Overlay for Text Visibility - Balanced to show sketch better */}
+        {/* Subtle Gradient Overlay */}
         <div className="absolute inset-0 z-0 bg-gradient-to-b from-sky-900/50 via-sky-900/10 to-sky-900/70 pointer-events-none" />
 
         <div className="container mx-auto px-4 pt-4 pb-2 text-center relative z-10">
-          <div className="absolute top-3 left-4 hidden md:block">
-            <span className="font-bold text-white tracking-widest text-sm uppercase opacity-80">Live in Wonder</span>
+          <div className="absolute top-3 left-4 flex items-center space-x-3">
+            <span className="font-bold text-white tracking-widest text-sm uppercase opacity-80 hidden md:block">Live in Wonder</span>
+            <button
+              onClick={signOut}
+              className="px-2 py-1 text-[10px] md:text-xs font-bold bg-slate-900/40 hover:bg-rose-500/20 text-sky-200 hover:text-rose-300 border border-sky-500/30 rounded-md transition-all backdrop-blur-sm"
+            >
+              LOGOUT
+            </button>
           </div>
           <div className="absolute top-2 right-2 flex flex-col items-end space-y-1">
             <div className="flex space-x-1 border border-sky-600 rounded-lg p-0.5 bg-sky-900/40 backdrop-blur-sm">
