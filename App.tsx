@@ -145,19 +145,6 @@ const App: React.FC = () => {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-900 text-slate-300 flex flex-col">
-        <header className="bg-sky-800 text-white shadow-lg p-6 text-center">
-          <h1 className="text-2xl font-bold">{t('headerTitle')}</h1>
-        </header>
-        <main className="flex-1 container mx-auto p-4 flex items-center justify-center">
-          <Auth />
-        </main>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-900 font-sans text-slate-300">
       <header className="bg-sky-800 text-white shadow-lg sticky top-0 z-20 overflow-hidden border-b border-sky-700/50">
@@ -174,12 +161,21 @@ const App: React.FC = () => {
         <div className="container mx-auto px-4 pt-4 pb-2 text-center relative z-10">
           <div className="absolute top-3 left-4 flex items-center space-x-3">
             <span className="font-bold text-white tracking-widest text-sm uppercase opacity-80 hidden md:block">Live in Wonder</span>
-            <button
-              onClick={signOut}
-              className="px-2 py-1 text-[10px] md:text-xs font-bold bg-slate-900/40 hover:bg-rose-500/20 text-sky-200 hover:text-rose-300 border border-sky-500/30 rounded-md transition-all backdrop-blur-sm"
-            >
-              LOGOUT
-            </button>
+            {user ? (
+              <button
+                onClick={signOut}
+                className="px-2 py-1 text-[10px] md:text-xs font-bold bg-slate-900/40 hover:bg-rose-500/20 text-sky-200 hover:text-rose-300 border border-sky-500/30 rounded-md transition-all backdrop-blur-sm"
+              >
+                {user.email?.split('@')[0]} · 로그아웃
+              </button>
+            ) : (
+              <button
+                onClick={() => setActiveTab('login' as ActiveTab)}
+                className="px-2 py-1 text-[10px] md:text-xs font-bold bg-sky-600/60 hover:bg-sky-500/80 text-white border border-sky-400/30 rounded-md transition-all backdrop-blur-sm"
+              >
+                로그인
+              </button>
+            )}
           </div>
           <div className="absolute top-2 right-2 flex flex-col items-end space-y-1">
             <div className="flex space-x-1 border border-sky-600 rounded-lg p-0.5 bg-sky-900/40 backdrop-blur-sm">
@@ -222,6 +218,7 @@ const App: React.FC = () => {
         {activeTab === 'diary' && <FaithDiary storageKey={`diary-${storageKey}`} />}
         {activeTab === 'mission' && (passage ? <EvangelismMission passage={passage} storageKey={`mission-${storageKey}`} /> : <div className="text-center p-8 bg-slate-800 rounded-lg">{t('readingFirst')}</div>)}
         {activeTab === 'map' && <MissionMap />}
+        {activeTab === ('login' as ActiveTab) && <Auth />}
       </main>
 
       <footer className="text-center py-6 text-slate-400">
