@@ -83,7 +83,7 @@ const App: React.FC = () => {
         // Prompt updated for clearer silhouettes and higher contrast
         const prompt = "An artistic pencil and ink sketch with vibrant but soft watercolor wash. The central figures are Jesus and a small child walking together, shown as BOLD AND DISTINCT SILHOUETTES with CLEAR OUTLINES. They are walking in a peaceful field during a golden sunset. High contrast between the figures and the warm glowing background. Ethereal, hand-drawn fine art style, minimalist but emotionally evocative.";
         const response = await ai.models.generateContent({
-          model: 'gemini-1.5-flash-image',
+          model: 'gemini-2.5-flash-image',
           contents: { parts: [{ text: prompt }] },
           config: {
             imageConfig: { aspectRatio: "16:9" }
