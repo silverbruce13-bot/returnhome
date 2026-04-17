@@ -112,7 +112,7 @@ const BibleChat: React.FC<BibleChatProps> = ({ passage }) => {
 
     const newChat = ai.chats.create({
       // Use recommended model for general chat tasks
-      model: 'gemini-1.5-flash',
+      model: 'gemini-flash-latest',
       config: {
         systemInstruction: systemInstruction,
       },
